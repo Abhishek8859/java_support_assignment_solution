@@ -1,0 +1,39 @@
+private static final Logger logger = LoggerFactory.getLogger(DocumentValidator.class);
+public ValidationResult validate(Document doc) {
+    try {
+        if (doc == null) {
+            // FIX: Null input is an expected validation failure, not a runtime exception
+            return ValidationResult.invalid("Document is null");
+        }
+
+        String content = doc.extractContent();
+        if (content == null || content.isEmpty()) {
+            // FIX: Treat empty content as validation failure instead of throwing exception
+            return ValidationResult.invalid("Empty content");
+        }
+        return runValidationRules(content);
+    } catch (Exception e) {
+        // FIX: Do not print stack trace directly; use logger and treat as unexpected error
+        logger.error("Unexpected error during document validation", e);
+
+        // FIX: Avoid returning null to prevent NullPointerException downstream
+        return ValidationResult.error("Validation failed due to system error");
+    }
+}
+
+public void validateBatch(List<Document> docs) {
+    for (Document doc : docs) {
+        try {
+            ValidationResult r = validate(doc);
+
+            // FIX: Prevent NullPointerException by handling possible error/null states explicitly
+            if (r != null && r.isValid()) {
+                saveResult(r);
+            }
+
+        } catch (Exception e) {
+            // FIX: Do not swallow exceptions silently; log unexpected failures for observability
+            logger.error("Unexpected error while processing document batch", e);
+        }
+    }
+}
